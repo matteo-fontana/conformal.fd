@@ -1,16 +1,22 @@
-#'CHECKS FOR CONFORMAL INFERENCE INTERVAL PREDICTION
+#' Checks for Conformal Inference in Functional Case
 #'
 #' It contains all the check functions in the package
 #' All the arguments are identical to the inputs of conformal.split.fun in the file
 #' split.R
-#' @param x The input variable, a list of n elements. Each element is composed by a list
+#'
+#' @param x The input variable, a list of n elements. Each element is composed by a
+#' list
 #'  of p vectors(with variable length, since the evaluation grid may change).
 #'  If x is NULL, the function will sample it from a gaussian.
-#' @param t_val The grid points for the evaluation of function y_val. It is a list of vectors.
+#' @param t_x The grid points for the evaluation of function x. It is a list of
+#' vectors.
+#' @param t_y The grid points for the evaluation of function y. It is a list of
+#' vectors.
 #' If the y_val data type is "fData" or "mfData" is must be NULL.
 #' @param y The response variable. It is either, as with x and t, a list of list of
 #'  vectors or an fda object (of type fd, fData, mfData).
-#' @param x0 The new points to evaluate, a list of n0 elements. Each element is composed
+#' @param x0 The new points to evaluate, a list of n0 elements. Each element is
+#' composed
 #'  by a list of p vectors(with variable length).
 #' @param train.fun A function to perform model training, i.e., to produce an
 #'   estimator of E(Y|X), the conditional expectation of the response variable
@@ -30,10 +36,11 @@
 #' @param seed.tau The seed for the randomized version.Default is FALSE.
 #' @param training_size Split proportion between training and calibration set.
 #' Default is 0.5.
+#'
 #' @noRd
 
-check.args=function(x,t_val,y,x0,train.fun,
-               predict.fun, alpha, seed, training_size, seed.tau, randomized){
+check.args=function(x,t_y,y,x0,train.fun,
+               predict.fun, alpha, seed=1, training_size=0.5, seed.tau=2, randomized=FALSE){
 
 
 if(!is.null(x)){
@@ -50,12 +57,12 @@ if(!is.null(x)){
 
 }
 
-  if (is.list(t_val)==FALSE || is.data.frame(t_val)==TRUE ){
+  if (is.list(t_y)==FALSE || is.data.frame(t_y)==TRUE ){
 
     stop("t must be a list.
-    Each of the 'p' lists must contain a numeric vector expressing the evaluation of the
-    function on a grid (whose length can be different in the 'p' dimensions).
-         'p'(i.e. the dimension of the multivariate function ) must be the same
+    Each of the 'q' lists must contain a numeric vector expressing the evaluation of the
+    function on a grid (whose length can be different in the 'q' dimensions).
+         'q'(i.e. the dimension of the multivariate function ) must be the same
          for all the multivariate functions.")}
 
 
@@ -63,11 +70,11 @@ if(!is.null(x)){
       || is.data.frame(y[[1]])==TRUE){
 
     stop("y must be a list of lists. Specifically, y must be a list of 'n' lists.
-    Each of the 'n' lists must be made up of 'p' lists.
-    Each of the 'p' lists must contain a numeric vector expressing the evaluation of the
+    Each of the 'n' lists must be made up of 'q' lists.
+    Each of the 'q' lists must contain a numeric vector expressing the evaluation of the
     function on a grid (whose length can be different in the 'p' dimensions).
          'n' (i.e. the sample size) must be greater or equal than 2.
-         'p'(i.e. the dimension of the multivariate function ) must be the same
+         'q'(i.e. the dimension of the multivariate function ) must be the same
          for all the multivariate functions.")}
 
 
@@ -83,12 +90,12 @@ if(!is.null(x)){
 }
 
   if (length(unique(vapply(y,length,integer(1))))!=1)
-    stop("'p'(i.e. the dimension of the multivariate function) must be
+    stop("'q'(i.e. the dimension of the multivariate function) must be
          the same for all the multivariate functions.")
 
-  p=length(y[[1]])
+  q=length(y[[1]])
 
- if(!(all(apply(t(vapply(y,function(x) vapply(x,length,integer(1)),integer(p))),2,
+ if(!(all(apply(t(vapply(y,function(x) vapply(x,length,integer(1)),integer(q))),2,
                 function(y) length(unique(y))==1))))
   stop("The 'n' functions must be evaluated on the same p-variate grid.
        The grid can vary between the p domains.")
@@ -97,7 +104,8 @@ if(!is.null(x)){
  if (!is.null(x) && length(x) != length(y)) {
 
    stop("length(x) and length(y) must match")
-   }
+ }
+
 
 
   if (is.null(train.fun) || !is.function(train.fun))
@@ -116,7 +124,8 @@ if(!is.null(x)){
 
 
 
-  if (is.null(training_size)==TRUE || (training_size!=FALSE & is.numeric(training_size)==FALSE)) stop("Argument 'training_size' must be either FALSE or an integer.")
+  if (is.null(training_size)==TRUE || (training_size!=FALSE & is.numeric(training_size)==FALSE))
+    stop("Argument 'training_size' must be either FALSE or an integer.")
 
 
   check.num.01(training_size)

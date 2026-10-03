@@ -1,61 +1,69 @@
-#' CONCURRENT MODEL FOR REGRESSION OVER FUNCTIONAL DATA
+#' Concurrent Model for Functional Regression
 #'
-#' This model is a concurrent model, which may be fed to split.conf.fun.
+#' It is a concurrent model, which may be fed to \code{\link{conformal.fun.split}}.
 #'
 #' @return A training and a prediction function.
 #'
 #' @details For more details about the structure of the inputs go to split.R
+#'
 #' @importFrom stats lm
-#' @export
+#' @export concurrent
 
 
 concurrent = function() {
 
-  train.fun = function(x,t,y) {
+  train.fun = function(x,t_y,y) {
 
 
-    yy=lapply(y, rapply, f = c) # Now a list of n components (join the internal p lists)
-    xx=lapply(x, rapply, f = c)
-    yyy=do.call(rbind, yy) #Convert the previous yy to a matrix
-    xxx=do.call(rbind, xx)
-
+    q=length(x[[1]])
+    n_eval=length(t_y[[1]])
+    xxx<-list2matrix(x)
+    yyy<-list2matrix(y)
     full = ncol(yyy)
     full_x = ncol(xxx)
 
-    if(full!=full_x)
-      stop(" The concurrent model requires a value of x for each value of y.
-           If the number of dimension is diffent, then use another model.
-           For instance the mean_fun model is available.")
+    idx=t(sapply(1:full, function(i){
+      a<-(i-1)%%n_eval + 1
+      return(seq(a,full_x,n_eval))}
+      ))
 
+    coeff=t(vapply(1:full, function(i) lm(formula = yyy[,i] ~  xxx[,idx[i,]])$coefficients,
+    numeric(q+1)))
 
-    coeff=vapply(1:full, function(i)
-      lm(formula = yyy[,i] ~  xxx[,i ])$coefficients,numeric(2))
-
-    return(list(coeff=coeff))
+    return(coeff)
   }
 
   # Prediction function
-  predict.fun = function(out,newx,t) {
+  predict.fun = function(out,newx,t_y) {
 
-    #Redefine structure
+    n0=length(newx)
+    n_eval=length(t_y[[1]])
+    q=length(t_y)
+    p=length(newx[[1]])
+    newx2<-list2matrix(newx)
+    full=n_eval*q
+    full_x=n_eval*p
 
-    new_xx=lapply(newx, rapply, f = c)
-    new_xxx=do.call(rbind, new_xx)
-    temp=out$coeff
+    grid=c(0,seq(n_eval,full,length.out=q))
+
+    idx=t(sapply(1:full, function(i){
+      a<-(i-1)%%n_eval + 1
+      return(seq(a,full_x,n_eval))}
+    ))
 
 
-    l=length(newx)
-    ya=temp[1,]
-    yaa=t(matrix(replicate(l,ya),nrow=length(ya)))
-    sol=new_xxx*temp[2,]+yaa
+    mat<-lapply(1:n0, function(i){
 
+      vec<-sapply(1:full, function(k){
+        return(c(1,newx2[i,idx[k,]])%*%out[k,]) #1,
+        })
 
-    list_sol=lapply(seq_len(nrow(sol)), function(i) list(sol[i,]))
+      return(lapply(1:q, function(j) vec[(grid[j]+1):grid[j+1]]))
+    })
 
-    return(list_sol)
+    return(mat)
+
   }
-
-
 
   return(list(train.fun=train.fun, predict.fun=predict.fun))
 }

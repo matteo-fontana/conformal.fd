@@ -2,7 +2,7 @@
 % Please edit documentation in R/mean.R
 \name{mean_lists}
 \alias{mean_lists}
-\title{MEAN OF FUNCTIONAL DATA}
+\title{Mean of Functional Data}
 \usage{
 mean_lists()
 }
@@ -10,8 +10,10 @@ mean_lists()
 It outputs a training function and a prediction function.
 }
 \description{
-This model is a fed to a Functional Conformal Prediction function.
+This model, which averages functional data, is a fed to a Functional Conformal Prediction
+function.
 }
 \details{
-For more details about the structure of the inputs go to split.fun.R
+For more details about the structure of the inputs go to the help of
+\code{\link{conformal.fun.split}}
 }

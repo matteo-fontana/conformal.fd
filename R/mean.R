@@ -1,12 +1,16 @@
-#' MEAN OF FUNCTIONAL DATA
+#' Mean of Functional Data
 #'
-#' This model is a fed to a Functional Conformal Prediction function.
-#'
+#' This model, which averages functional data, is a fed to a Functional Conformal Prediction
+#' function.
 #'
 #' @return It outputs a training function and a prediction function.
-#' @details For more details about the structure of the inputs go to split.fun.R
+#' @details For more details about the structure of the inputs go to the help of
+#' \code{\link{conformal.fun.split}}
 #'
 #' @export
+#'
+
+
 
 
 mean_lists = function() {
@@ -45,7 +49,13 @@ mean_lists = function() {
     return(sol)
   }
 
+  special.fun = function(x,t,y,out){
+    return(y)
+  }
 
 
-  return(list(train.fun=train.fun, predict.fun=predict.fun))
+
+
+
+  return(list(train.fun=train.fun, predict.fun=predict.fun, special.fun=special.fun))
 }

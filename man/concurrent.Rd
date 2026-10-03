@@ -2,7 +2,7 @@
 % Please edit documentation in R/concurrent.R
 \name{concurrent}
 \alias{concurrent}
-\title{CONCURRENT MODEL FOR REGRESSION OVER FUNCTIONAL DATA}
+\title{Concurrent Model for Functional Regression}
 \usage{
 concurrent()
 }
@@ -10,7 +10,7 @@ concurrent()
 A training and a prediction function.
 }
 \description{
-This model is a concurrent model, which may be fed to split.conf.fun.
+It is a concurrent model, which may be fed to \code{\link{conformal.fun.split}}.
 }
 \details{
 For more details about the structure of the inputs go to split.R
