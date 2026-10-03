@@ -1,13 +1,15 @@
-#'Functional Split conformal prediction intervals.
+#' Functional Split Conformal Prediction Intervals
 #'
 #' Compute prediction intervals using split conformal inference.
 #'
 #' @param x The input variable, a list of n elements. Each element is composed by a list
 #'  of p vectors(with variable length, since the evaluation grid may change).
 #'  If x is NULL, the function will sample it from a gaussian.
-#' @param t The grid points for the evaluation of function y_val. It is a list of vectors.
+#' @param t_x The grid points for the evaluation of function x. It is a list of vectors.
+#' If the x data type is "fData" or "mfData" is must be NULL.
+#' @param t_y The grid points for the evaluation of function y_val. It is a list of vectors.
 #' If the y_val data type is "fData" or "mfData" is must be NULL.
-#' @param y The response variable. It is either, as with x and t, a list of list of
+#' @param y The response variable. It is either, as with x, a list of list of
 #'  vectors or an fda object (of type fd, fData, mfData).
 #' @param x0 The new points to evaluate, a list of n0 elements. Each element is composed
 #'  by a list of p vectors(with variable length).
@@ -29,52 +31,48 @@
 #'   If both split and seed are passed, the former takes priority and the latter
 #'   is ignored.
 #' @param randomized Should the randomized approach be used? Default is FALSE.
-#' @param seed_tau The seed for the randomized version.Default is FALSE.
+#' @param seed.rand The seed for the randomized version.Default is FALSE.
 #' @param verbose Should intermediate progress be printed out? Default is FALSE.
-#' @param training_size Split proportion between training and calibration set.
+#' @param rho Split proportion between training and calibration set.
 #' Default is 0.5.
-#' @param s_type The type of modulation function.
+#' @param s.type The type of modulation function.
 #'  Currently we have 3 options: "identity","st-dev","alpha-max". Default is "std-dev".
 #'
-#' @return A list with the following components: t,pred,k_s,s_type,s,alpha,randomized,tau,
-#'  extremes_are_included,average_width,product_integral. t and s are lists of vectors,
+#' @return A list with the following components: t,pred,average_width,lo, up.
+#' t is a list of vectors,
 #' pred has the same interval structure of y_val, but the outside list is of length n0,
-#' k_s, average_width and product_integral are all positive floats, alpha and tau are
-#' positive floats less than 1, randomized and extremes_are_included are logical values,
-#' while s_type is a string.
+#' lo and up are lists of length n0 of lists of length
+#' p, each containing a vector of lower and upper bounds respectively.
 #'
-#' @references The function structure is taken from "Conformal Prediction Bands
-#' for Multivariate Functional Data" by Diquigiovanni, Fontana, Vantini (2021) and,
-#' also, from "The Importance of Being a Band: Finite-Sample Exact Distribution-Free
-#' Prediction Sets for Functional Data" by Diquigiovanni, Fontana, Vantini (2021).
 #'
 #' @example inst/examples/ex.split.R
 #' @export
 
 
-conformal.fun.split = function(x, t, y, x0, train.fun, predict.fun, alpha=0.1,
-                             split=NULL, seed=FALSE, randomized=FALSE,seed_tau=FALSE,
-                                verbose=FALSE, training_size=0.5,s_type="st-dev") {
+conformal.fun.split = function(x, t_x, y,t_y, x0, train.fun, predict.fun, alpha=0.1,
+                             split=NULL, seed=FALSE, randomized=FALSE,seed.rand=FALSE,
+                                verbose=FALSE, rho=0.5,s.type="st-dev") {
 
 
   ############ DATA PREPARATION #############################
   check.null.data(y)
-  conv = convert2data(t,y,x,x0)
+  conv = convert2data(x,t_x,y,t_y,x0)
 
   x = conv$x
   y = conv$y
-  t = conv$t
+  t_x = conv$t_x
+  t_y = conv$t_y
   x0 = conv$x0
 
-
+  n0<-length(x0)
   n=length(y)
   p=length(y[[1]])
   grid_size=vapply(y[[1]],function(x) length(x),integer(1))
 
   # Check input arguments
-  check.args(x=x,t_val=t,y=y,x0=x0,train.fun=train.fun,
+  check.args(x=x, t_y=t_y,y=y,x0=x0,train.fun=train.fun,
              predict.fun=predict.fun, alpha=alpha, seed=seed, training_size
-             =training_size, seed.tau=seed.tau, randomized=randomized)
+             =rho, seed.tau=seed.tau, randomized=randomized)
 
 
   # Users may pass in a string for the verbose argument
@@ -89,10 +87,12 @@ conformal.fun.split = function(x, t, y, x0, train.fun, predict.fun, alpha=0.1,
 
   if(is.null(split)){
 
-    if(ceiling(n*training_size) !=n )
-      m=ceiling(n*training_size)
-    else
-      m=ceiling(n*training_size)-1
+    if(ceiling(n*rho) !=n ){
+      m=ceiling(n*rho)
+    }
+    else{
+      m=ceiling(n*rho)-1
+    }
 
     l=n-m
 
@@ -109,7 +109,7 @@ conformal.fun.split = function(x, t, y, x0, train.fun, predict.fun, alpha=0.1,
   calibration=setdiff(1:n,training)
 
   if(randomized==FALSE) {tau=1} else{
-    if(seed_tau!=FALSE){set.seed(seed_tau)}
+    if(seed.rand!=FALSE){set.seed(seed.rand)}
     tau=stats::runif(n=1,min=0,max=1)
   }
 
@@ -123,10 +123,12 @@ conformal.fun.split = function(x, t, y, x0, train.fun, predict.fun, alpha=0.1,
   }
 
 
-  out = train.fun(x[training,drop=F],t,y[training])
-  fit = predict.fun(out,x,t)
 
-  pred = predict.fun(out,x0,t)
+  out = train.fun(x[training,drop=F],t_y,y[training])
+  fit = predict.fun(out,x,t_y)
+  pred = predict.fun(out,x0,t_y)
+
+  #print(out)
 
 
   if (verbose) {
@@ -144,7 +146,7 @@ conformal.fun.split = function(x, t, y, x0, train.fun, predict.fun, alpha=0.1,
     cat(sprintf("%sComputing modulation function ...\n",txt))
   }
 
-  s=computing_s_regression(vec_residual=vect_residuals_y[training,],type=s_type,
+  s=computing_s_regression(vec_residual=vect_residuals_y[training,],type=s.type,
                            alpha=alpha,tau=tau,grid_size=grid_size)
   vect_s=unlist(s)
 
@@ -154,6 +156,7 @@ conformal.fun.split = function(x, t, y, x0, train.fun, predict.fun, alpha=0.1,
 
 
   rho=apply(vect_residuals_y[calibration,],1,function(x) max(abs(x)/vect_s))
+
   k_s=sort(rho,decreasing=FALSE)[ceiling(l+tau-(l+1)*alpha)]
 
 
@@ -162,19 +165,19 @@ conformal.fun.split = function(x, t, y, x0, train.fun, predict.fun, alpha=0.1,
   if ((ceiling(l+tau-(l+1)*alpha))==l) r=0
   else{r=sum(sort(rho,decreasing=FALSE)[(ceiling(l+tau-(l+1)*alpha)+1):length(rho)]==k_s)}
 
-  extremes_are_included= tau > (alpha*(l+1)-floor(alpha*(l+1)-tau)+r)/(r+v+2)
   average_width=mean(2*k_s*vect_s)
-  product_integral=exp(mean(log(2*k_s*vect_s)))
 
 
   ##################### BUILD BOUNDS #######################
 
+  acc_grid=c(1,cumsum(grid_size))
+
+  lo<-lapply(1:n0, function(i) lapply(1:p, function(j) pred[[i]][[j]]-k_s* s[[j]]))
+  up<-lapply(1:n0, function(i) lapply(1:p, function(j) pred[[i]][[j]]+k_s* s[[j]]))
 
 
-  return(structure(.Data=list(t,pred,k_s,s_type,s,alpha,randomized,tau,
-                              extremes_are_included,average_width,product_integral),
-                   names=c("t","pred","k_s","s_type","s","alpha","randomized","tau"
-                           ,"extremes_are_included","average_width","product_integral")))
+  return(structure(.Data=list(t_y,pred,lo,up),
+                   names=c("t","pred","lo","up")))
 
 }
 

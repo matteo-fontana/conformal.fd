@@ -1,27 +1,48 @@
 #' CONVERSION OF FUNCTIONAL DATA OBJECTS TO GRID EVALUATIONS OF FUNCTIONS
 #'
 #'
-#' @param t Either NULL or a list of vectors (grid points in the various p dimensions)
-#' @param y An object of class "fData","mfData" or "fd".
-#' @param x The input variable, a list of n elements. Each element is composed by a list
-#' @param x0 The input variable, a list of n0 elements. Each element is composed by a list
-#' @return t A list of vectors (grid points in the various p dimensions)
+#' @param t_x Either NULL or a list of vectors (grid points in the various p dimensions
+#' )
+#' @param t_y Either NULL or a list of vectors (grid points in the various p dimensions
+#' )
+#' @param y An object of is "fData","mfData" or "fd".
+#' @param x The input variable, a list of n elements. Each element is composed by a
+#' list
+#' @param x0 The input variable, a list of n0 elements. Each element is composed by a
+#' list
+#' @details It returns : t A list of vectors (grid points in the various p
+#' dimensions)
 #' y A grid of functional evaluated points (a list of list of vectors)
 #'
-#' @export
+#' @importFrom methods is
+#' @noRd
 
 
 
-convert2data = function(t, y, x, x0){
+convert2data = function(x,t_x,y,t_y,x0){
 
-flag<- (is.null(t) & (class(y) %in% c("fData","mfData"))) ||
-    (!is.null(t) & class(y)=="fd")
+  flag_y<-(is.null(t_y) & (is(y,"fData") ||  is(y,"mfData") ))||(!is.null(t_y) & is(y,"fd"))
 
-if(flag){
-  sol=fun2data(t,y)
-    t=sol$t
+if(flag_y){
+  sol=fun2data(t_y,y)
+    t_y=sol$t
     y=sol$y
 }
+
+
+flag_x<- (is.null(t_x) & (is(x,"fData") ||  is(x,"mfData") )) ||
+  (!is.null(t_x) & is(x,"fd"))
+
+if(flag_x){
+  sol=fun2data(t_x,x)
+  t_x=sol$t
+  x=sol$y
+}
+
+flag_x0<- (is.null(t_x) & (is(x0,"fData") ||  is(x0,"mfData") )) ||
+  (!is.null(t_x) & is(x0,"fd"))
+
+
 
 
 n=length(y)
@@ -47,7 +68,6 @@ if(is.null(x0)){
 }
 
 
-
 if( (is.matrix(x) || is.data.frame(x)))
   x = table2list(x)
 
@@ -58,17 +78,26 @@ if(is.matrix(y) || is.data.frame(y))
   y = table2list(y)
 
 
-if(is.matrix(t) || is.data.frame(t)){
+if(is.matrix(t_x) || is.data.frame(t_x)){
 
-  t = lapply(seq_len(ncol(t)), function(u) t[,u])
+  t_x = lapply(seq_len(ncol(t_x)), function(u) t_x[,u])
+
+}
+
+if(is.matrix(t_y) || is.data.frame(t_y)){
+
+  t_y = lapply(seq_len(ncol(t_y)), function(u) t_y[,u])
 
 }
 
 
 
-return(list(x = x, y = y, t = t, x0 = x0))
+return(list(x = x, y = y, t_x = t_x,t_y=t_y, x0 = x0))
 
 }
+
+
+
 
 fun2data=function(t,y_val){
 
@@ -78,7 +107,7 @@ fun2data=function(t,y_val){
 
 
 
-    if(class(y_val)=="fData" ){ #only univariate
+    if((is(y_val,"fData") )){ #only univariate
 
       n=y_val$N
       y= vector(mode = "list", length =n) #initialize, makes sense?
@@ -90,7 +119,7 @@ fun2data=function(t,y_val){
 
     }
 
-    if(class(y_val)=="mfData" ){ # even multivariate (roahd)
+    if(is(y_val,"mfData" )){ # even multivariate (roahd)
 
       n=y_val$N
       p=y_val$L
@@ -105,7 +134,7 @@ fun2data=function(t,y_val){
   else{
 
 
-    if(class(y_val)=="fd"){ #Only for univariate data (fda)
+    if(is(y_val,"fd")){ #Only for univariate data (fda)
       vale=fda::eval.fd(t,y_val)
       val=t(data.matrix(vale,rownames.force=TRUE))
       t_val=list(t)
@@ -123,9 +152,43 @@ fun2data=function(t,y_val){
 
 }
 
+
+
 table2list = function(table){
 
     return(lapply(seq_len(nrow(table)), function(x) lapply(seq_len(ncol(table)),
                                                            function(s) table[x,s]) ))
 
 }
+
+
+list2matrix = function(lis){
+
+  one_lis=lapply(lis, rapply, f = c)
+  mat=do.call(rbind, one_lis)
+
+  return(mat)
+}
+
+matrix2list = function(mat,grid){
+
+  p=length(grid)
+  grid=c(0,grid)
+  n = nrow(mat)
+
+  lis<-lapply(1:n,function(i) lapply(1:p, function(j) mat[i,(grid[j]+1):grid[j+1]]))
+
+  return(lis)
+
+}
+
+matrix2roahd = function(mat,grid){
+
+  p=length(grid)
+  grid=c(1,grid)
+  n = nrow(mat)
+
+  return(lapply(1:p,function(j) t(sapply(1:n, function(i) mat[i,grid[j]:grid[j+1]]))))
+
+}
+
